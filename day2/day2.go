@@ -37,14 +37,14 @@ func main() {
 	// A for Rock, B for Paper, and C for Scissors
 	// X for Rock, Y for Paper, and Z for Scissors
 	wins := map[string]string{
-		"A": "Y",
-		"B": "Z",
-		"C": "X",
+		"A": "B",
+		"B": "C",
+		"C": "A",
 	}
 	loss := map[string]string{
-		"A": "Z",
-		"B": "X",
-		"C": "Y",
+		"A": "C",
+		"B": "A",
+		"C": "B",
 	}
 	part1Points := 0
 	part2Points := 0

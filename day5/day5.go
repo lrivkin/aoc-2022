@@ -28,8 +28,27 @@ func part1(moves [][]int, blocks [][]string) string {
 	}
 	return topBlocks
 }
-func part2() int {
-	return 0
+
+func part2(moves [][]int, blocks [][]string) string {
+	for _, m := range moves {
+		// fmt.Printf("%v\n", blocks)
+		count := m[0]
+		stackSrc := m[1]
+		stackDest := m[2]
+
+		start := len(blocks[stackSrc]) - count
+		for i := start; i < start+count; i += 1 {
+			blocks[stackDest] = append(blocks[stackDest], blocks[stackSrc][i])
+		}
+		blocks[stackSrc] = blocks[stackSrc][0 : len(blocks[stackSrc])-count]
+		// fmt.Printf("%v\n", blocks)
+	}
+	fmt.Printf("%v\n", blocks)
+	topBlocks := ""
+	for i := 1; i < len(blocks); i += 1 {
+		topBlocks = fmt.Sprintf("%s%s", topBlocks, blocks[i][len(blocks[i])-1])
+	}
+	return topBlocks
 }
 
 func parseMoves(m string) [][]int {
@@ -70,6 +89,9 @@ func main() {
 	p := strings.Split(string(file), "\n\n")
 	moves := parseMoves(p[1])
 	blocks := parseBlocks(p[0])
-	print(part1(moves, blocks))
+	fmt.Println(part1(moves, blocks))
+
+	blocks2 := parseBlocks(p[0])
+	fmt.Println(part2(moves, blocks2))
 
 }

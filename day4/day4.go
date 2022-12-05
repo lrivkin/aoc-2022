@@ -2,26 +2,24 @@ package main
 
 import (
 	"fmt"
+	"os"
 	"regexp"
 	"strconv"
-
-	"github.com/lrivkin/aoc-2022/utils"
 )
 
 func parseInput(path string) [][]int {
-	re := regexp.MustCompile(`(\d+)-(\d+),(\d+)-(\d+)`)
-	file, _ := utils.ReadLines(path)
-	nums := make([][]int, len(file))
-	for i := range file {
-		matches := re.FindStringSubmatch(file[i])
-		ids := make([]int, 4)
-		for j, m := range matches[1:] {
-			val, _ := strconv.Atoi(m)
-			ids[j] = val
+	re := regexp.MustCompile(`(\d+)-(\d+),(\d+)-(\d+)\n`)
+	file, _ := os.ReadFile(path)
+	matches := re.FindAllSubmatch(file, -1)
+	nums := make([][]int, len(matches))
+	// fmt.Printf("%q\n", matches)
+	for i := range matches {
+		nums[i] = make([]int, 4)
+		for j, m := range matches[i][1:] {
+			val, _ := strconv.Atoi(string(m))
+			nums[i][j] = val
 		}
-		nums[i] = ids
 	}
-	// fmt.Println(nums)
 	return nums
 }
 func part1(ranges [][]int) int {

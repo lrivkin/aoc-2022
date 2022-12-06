@@ -28,9 +28,9 @@ func part1(in string) int {
 }
 
 func main() {
-	tests, _ := utils.ReadBlock("test.txt")
+	tests, _ := utils.ReadLines("test.txt")
 	for _, t := range tests {
-		part1(t[0])
+		part1(t)
 	}
 	in, _ := utils.ReadLines("input.txt")
 	part1(in[0])

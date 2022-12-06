@@ -10,13 +10,13 @@ import (
 func parseInput(path string) [][]int {
 	re := regexp.MustCompile(`(\d+)-(\d+),(\d+)-(\d+)\n`)
 	file, _ := os.ReadFile(path)
-	matches := re.FindAllSubmatch(file, -1)
+	matches := re.FindAllStringSubmatch(string(file), -1)
 	nums := make([][]int, len(matches))
 	// fmt.Printf("%q\n", matches)
 	for i := range matches {
 		nums[i] = make([]int, 4)
 		for j, m := range matches[i][1:] {
-			val, _ := strconv.Atoi(string(m))
+			val, _ := strconv.Atoi(m)
 			nums[i][j] = val
 		}
 	}

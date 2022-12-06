@@ -6,32 +6,43 @@ import (
 	"github.com/lrivkin/aoc-2022/utils"
 )
 
-func part1(in string) int {
-	var seen map[string]struct{}
+func findIdx(in string, numChars int) int {
+	seen := make(map[string]int, numChars)
+	minIdx := 0
 	for i := 0; i < len(in); i += 1 {
-		seen = map[string]struct{}{}
-		for j := i; j < len(in) && j < i+14; j += 1 {
-			_, ok := seen[in[j:j+1]]
-			if ok {
-				break
+		char := in[i : i+1]
+		oldIdx, ok := seen[char]
+		if ok {
+			for j := minIdx; j <= oldIdx; j += 1 {
+				delete(seen, in[j:j+1])
 			}
-			if j == i+13 {
-				fmt.Printf("found it! %d, %s\n", j+1, in[i:j+1])
-				return j + 1
-			}
-			seen[in[j:j+1]] = struct{}{}
+			minIdx = oldIdx + 1
 		}
-
+		seen[char] = i
+		if i-minIdx > numChars {
+			delete(seen, in[minIdx:minIdx+1])
+			minIdx += 1
+		}
+		// fmt.Printf("%v\n", seen)
+		if len(seen) == numChars {
+			fmt.Printf("%d unique characters\t%d %s\n", numChars, i+1, in[i-numChars:i+1])
+			return i + 1
+		}
 	}
-	// fmt.Println(chars)
 	return 0
 }
 
 func main() {
+	fmt.Println("Tests")
 	tests, _ := utils.ReadLines("test.txt")
 	for _, t := range tests {
-		part1(t)
+		findIdx(t, 4)
+		findIdx(t, 14)
+
 	}
+	fmt.Printf("\nMy input\n")
 	in, _ := utils.ReadLines("input.txt")
-	part1(in[0])
+	findIdx(in[0], 4)
+	findIdx(in[0], 14)
+
 }

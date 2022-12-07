@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"regexp"
 	"strconv"
+	"strings"
 
 	"github.com/lrivkin/aoc-2022/utils"
 )
@@ -24,14 +25,14 @@ var (
 
 type File struct {
 	name string
-	size int
+	size uint64
 }
 
 func (f *File) String() string {
 	return fmt.Sprintf("%s: size=%d", f.name, f.size)
 }
 
-func (f *File) getSize() int {
+func (f *File) getSize() uint64 {
 	return f.size
 }
 
@@ -40,27 +41,50 @@ type Directory struct {
 	parent   *Directory
 	files    []*File
 	children []*Directory
+	size     *uint64
 }
 
 func (d *Directory) String() string {
-	return fmt.Sprintf("%s: %v", d.name, d.files)
+	children := []string{}
+	for _, subDir := range d.children {
+		children = append(children, subDir.name)
+	}
+	return fmt.Sprintf("%s:\n\tFiles= %v\n\tSubdirectories= %v", d.name, d.files, children)
 }
 
-func (d *Directory) getSize() int {
-	size := 0
+func (d *Directory) PrintAll(level int) {
+	indent := strings.Repeat("\t", level)
+	fmt.Printf("%s%s\n", indent, d.name)
+	indent += "\t"
+	fmt.Printf("%sFiles= %v\n", indent, d.files)
+	for _, subDir := range d.children {
+		subDir.PrintAll(level + 1)
+	}
+
+}
+
+func (d *Directory) GetSize() *uint64 {
+	if d.size != nil {
+		// fmt.Printf("Dir %s size= %d", d.name, *d.size)
+		return d.size
+	}
+	dirSize := uint64(0)
 	for _, f := range d.files {
-		size += f.getSize()
+		dirSize += f.getSize()
 	}
 	for _, subDir := range d.children {
-		size += subDir.getSize()
+		dirSize += *subDir.GetSize()
 	}
-	return size
+	d.size = &dirSize
+	fmt.Printf("Dir %s size= %d\n", d.name, *d.size)
+
+	return &dirSize
 }
 
-func main() {
-	lines, _ := utils.ReadLines("test.txt")
-	fs := map[string]*Directory{}
+func parseFS(path string) map[string]*Directory {
+	lines, _ := utils.ReadLines(path)
 
+	fs := map[string]*Directory{}
 	workDir := &Directory{
 		name:     "/",
 		parent:   nil,
@@ -96,8 +120,8 @@ func main() {
 			workDir = d
 		} else if matches := DirRegexp.FindStringSubmatch(l); matches != nil {
 			dir := matches[1]
-			var d *Directory
-			if _, ok := fs[dir]; !ok {
+			d, ok := fs[dir]
+			if !ok {
 				d = &Directory{
 					name:     dir,
 					parent:   workDir,
@@ -111,7 +135,7 @@ func main() {
 			// fmt.Printf("(from ls) dir = %s\n", dir)
 		} else if matches := FileRegexp.FindStringSubmatch(l); matches != nil {
 			sizeStr := matches[1]
-			size, _ := strconv.Atoi(sizeStr)
+			size, _ := strconv.ParseUint(sizeStr, 10, 0)
 			name := matches[2]
 			f := &File{
 				name: name,
@@ -120,8 +144,15 @@ func main() {
 			workDir.files = append(workDir.files, f)
 		}
 	}
-	for _, dir := range fs {
-		fmt.Printf("%v\n", dir)
-	}
+	return fs
+}
+func main() {
+	test := parseFS("test.txt")
+	test["/"].PrintAll(0)
+	test["/"].GetSize()
 
+	fmt.Printf("\nMy Input\n")
+	myInput := parseFS("input.txt")
+	myInput["/"].GetSize()
+	// myInput["/"].PrintAll(0)
 }

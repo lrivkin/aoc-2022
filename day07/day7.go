@@ -2,11 +2,10 @@ package main
 
 import (
 	"fmt"
+	"os"
 	"regexp"
 	"strconv"
 	"strings"
-
-	"github.com/lrivkin/aoc-2022/utils"
 )
 
 func part1() int {
@@ -21,6 +20,7 @@ var (
 	LS         = "$ ls"
 	DirRegexp  = regexp.MustCompile(`^dir (\S+)$`)
 	FileRegexp = regexp.MustCompile(`^(\d+) (\S+)$`)
+	Rex        = regexp.MustCompile(`(\$ cd \S+\n)+\$ ls\n[^$]+`)
 )
 
 type File struct {
@@ -29,10 +29,11 @@ type File struct {
 }
 
 func (f *File) String() string {
-	return fmt.Sprintf("%s: size=%d", f.name, f.size)
+	return fmt.Sprintf("%s: %d", f.name, f.size)
 }
 
 func (f *File) getSize() uint64 {
+
 	return f.size
 }
 
@@ -41,118 +42,85 @@ type Directory struct {
 	parent   *Directory
 	files    []*File
 	children []*Directory
-	size     *uint64
-}
-
-func (d *Directory) String() string {
-	children := []string{}
-	for _, subDir := range d.children {
-		children = append(children, subDir.name)
-	}
-	return fmt.Sprintf("%s:\n\tFiles= %v\n\tSubdirectories= %v", d.name, d.files, children)
+	size     uint64
+	done     bool
 }
 
 func (d *Directory) PrintAll(level int) {
-	indent := strings.Repeat("\t", level)
+	indent := strings.Repeat("  ", level)
 	fmt.Printf("%s%s\n", indent, d.name)
-	indent += "\t"
-	fmt.Printf("%sFiles= %v\n", indent, d.files)
+	indent += "  "
+	fmt.Printf("%s%v\n", indent, d.files)
 	for _, subDir := range d.children {
 		subDir.PrintAll(level + 1)
 	}
 
 }
 
-func (d *Directory) GetSize() *uint64 {
-	if d.size != nil {
-		// fmt.Printf("Dir %s size= %d", d.name, *d.size)
-		return d.size
-	}
-	dirSize := uint64(0)
-	for _, f := range d.files {
-		dirSize += f.getSize()
-	}
-	for _, subDir := range d.children {
-		dirSize += *subDir.GetSize()
-	}
-	d.size = &dirSize
-	fmt.Printf("Dir %s size= %d\n", d.name, *d.size)
-
-	return &dirSize
-}
-
-func parseFS(path string) map[string]*Directory {
-	lines, _ := utils.ReadLines(path)
-
-	fs := map[string]*Directory{}
+func parse(path string) map[string]*Directory {
+	in, _ := os.ReadFile(path)
+	inStr := string(in)
 	workDir := &Directory{
 		name:     "/",
 		parent:   nil,
 		files:    []*File{},
 		children: []*Directory{},
+		size:     0,
 	}
-	fs["/"] = workDir
-
-	for _, l := range lines[1:] {
-		// fmt.Println(l)
-		if l == LS {
-			// get the next lines
-			// fmt.Printf("ls\n")
-		} else if matches := CdRegexp.FindStringSubmatch(l); matches != nil {
-			// get the directory
-			dir := matches[1]
-			if dir == ".." {
-				workDir = workDir.parent
-				continue
-			}
-			d, ok := fs[dir]
-			if !ok {
-				// create this directory for the first time
-				d = &Directory{
-					name:     dir,
-					parent:   workDir,
-					files:    []*File{},
-					children: []*Directory{},
+	fs := map[string]*Directory{"/": workDir}
+	for _, block := range Rex.FindAllString(inStr, -1) {
+		for _, line := range strings.Split(block, "\n") {
+			if matches := CdRegexp.FindStringSubmatch(line); matches != nil {
+				dir := matches[1]
+				if dir == ".." {
+					workDir = workDir.parent
+				} else {
+					workDir = fs[dir]
 				}
-				fs[dir] = d
-			}
-			// move into that folder
-			workDir = d
-		} else if matches := DirRegexp.FindStringSubmatch(l); matches != nil {
-			dir := matches[1]
-			d, ok := fs[dir]
-			if !ok {
-				d = &Directory{
-					name:     dir,
-					parent:   workDir,
-					files:    []*File{},
-					children: []*Directory{},
+			} else if matches := FileRegexp.FindStringSubmatch(line); matches != nil {
+				sizeStr := matches[1]
+				size, _ := strconv.ParseUint(sizeStr, 10, 0)
+				name := matches[2]
+				f := &File{
+					name: name,
+					size: size,
 				}
-				fs[dir] = d
+				workDir.files = append(workDir.files, f)
+				workDir.size += size
+			} else if matches := DirRegexp.FindStringSubmatch(line); matches != nil {
+				dir := matches[1]
+				d, ok := fs[dir]
+				if !ok {
+					d = &Directory{
+						name:     dir,
+						parent:   workDir,
+						files:    []*File{},
+						children: []*Directory{},
+					}
+					fs[dir] = d
+				}
+				// add this directory to child set
+				workDir.children = append(workDir.children, d)
 			}
-			// add this directory to child set
-			workDir.children = append(workDir.children, d)
-			// fmt.Printf("(from ls) dir = %s\n", dir)
-		} else if matches := FileRegexp.FindStringSubmatch(l); matches != nil {
-			sizeStr := matches[1]
-			size, _ := strconv.ParseUint(sizeStr, 10, 0)
-			name := matches[2]
-			f := &File{
-				name: name,
-				size: size,
+		}
+		if len(workDir.children) == 0 {
+			workDir.done = true
+			if workDir.parent != nil {
+				workDir.parent.size += workDir.size
 			}
-			workDir.files = append(workDir.files, f)
 		}
 	}
 	return fs
 }
 func main() {
-	test := parseFS("test.txt")
+	test := parse("test.txt")
 	test["/"].PrintAll(0)
-	test["/"].GetSize()
-
-	fmt.Printf("\nMy Input\n")
-	myInput := parseFS("input.txt")
-	myInput["/"].GetSize()
+	for _, dir := range test {
+		fmt.Printf("%s size= %d\n", dir.name, dir.size)
+	}
+	// test["/"].GetSize()
+	// fmt.Printf("\nMy Input\n")
+	// myInput := parse("input.txt")
+	// // myInput["/"].GetSize()
 	// myInput["/"].PrintAll(0)
 }

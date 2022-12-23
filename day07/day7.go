@@ -38,44 +38,46 @@ func (f *File) getSize() uint64 {
 }
 
 type Directory struct {
-	name     string
-	parent   *Directory
-	files    []*File
-	children []*Directory
-	size     uint64
-	done     bool
+	name   string
+	parent *Directory
+	files  []*File
+	size   uint64
+	done   bool
 }
 
-func (d *Directory) PrintAll(level int) {
-	indent := strings.Repeat("  ", level)
-	fmt.Printf("%s%s\n", indent, d.name)
-	indent += "  "
-	fmt.Printf("%s%v\n", indent, d.files)
-	for _, subDir := range d.children {
-		subDir.PrintAll(level + 1)
-	}
+var (
+	fs []map[string]*Directory
+)
 
-}
-
-func parse(path string) map[string]*Directory {
+func parse(path string) {
 	in, _ := os.ReadFile(path)
 	inStr := string(in)
 	workDir := &Directory{
-		name:     "/",
-		parent:   nil,
-		files:    []*File{},
-		children: []*Directory{},
-		size:     0,
+		name:   "/",
+		parent: nil,
+		files:  []*File{},
+		size:   0,
 	}
-	fs := map[string]*Directory{"/": workDir}
+
+	fs = []map[string]*Directory{{"/": workDir}}
+	level := 0
 	for _, block := range Rex.FindAllString(inStr, -1) {
 		for _, line := range strings.Split(block, "\n") {
 			if matches := CdRegexp.FindStringSubmatch(line); matches != nil {
 				dir := matches[1]
 				if dir == ".." {
+					level--
 					workDir = workDir.parent
+					// fmt.Printf("moved to %s\n", workDir.name)
 				} else {
-					workDir = fs[dir]
+					d, ok := fs[level][dir]
+					if !ok {
+						fmt.Printf("fs[%d]=%v\n", level, fs[level])
+						panic("this dir should exist but doesnt")
+					}
+					workDir = d
+					// fmt.Printf("moved to %s\n", workDir.name)
+					level++
 				}
 			} else if matches := FileRegexp.FindStringSubmatch(line); matches != nil {
 				sizeStr := matches[1]
@@ -86,38 +88,56 @@ func parse(path string) map[string]*Directory {
 					size: size,
 				}
 				workDir.files = append(workDir.files, f)
-				workDir.size += size
 			} else if matches := DirRegexp.FindStringSubmatch(line); matches != nil {
 				dir := matches[1]
-				d, ok := fs[dir]
-				if !ok {
-					d = &Directory{
-						name:     dir,
-						parent:   workDir,
-						files:    []*File{},
-						children: []*Directory{},
-					}
-					fs[dir] = d
+				// fmt.Printf("adding subdir %s to dir %s, fs=%v\n", dir, workDir.name, fs)
+				// create new child dir
+				if level >= len(fs) {
+					newMap := map[string]*Directory{}
+					fs = append(fs, newMap)
 				}
-				// add this directory to child set
-				workDir.children = append(workDir.children, d)
-			}
-		}
-		if len(workDir.children) == 0 {
-			workDir.done = true
-			if workDir.parent != nil {
-				workDir.parent.size += workDir.size
+				l := fs[level]
+				_, ok := l[dir]
+				if !ok {
+					d := &Directory{
+						name:   dir,
+						parent: workDir,
+						files:  []*File{},
+					}
+					fs[level][dir] = d
+				}
+				// fmt.Printf("added subdir %s to dir %s, fs=%v\n", dir, workDir.name, fs)
 			}
 		}
 	}
-	return fs
+	fmt.Printf("fs=%v\n", fs)
 }
-func main() {
-	test := parse("test.txt")
-	test["/"].PrintAll(0)
-	for _, dir := range test {
-		fmt.Printf("%s size= %d\n", dir.name, dir.size)
+
+func calculate_sizes() {
+	for i := len(fs) - 1; i >= 0; i-- {
+		for _, dir := range fs[i] {
+			// sum up files
+			for _, file := range dir.files {
+				dir.size += file.size
+			}
+			// add size to parent
+			if i > 0 {
+				dir.parent.size += dir.size
+			}
+			fmt.Printf("dir= %s size= %d\n", dir.name, dir.size)
+		}
 	}
+}
+
+func main() {
+	parse("test.txt")
+	calculate_sizes()
+	fmt.Printf("\nTrying with my real input\n")
+	parse("input.txt")
+	calculate_sizes()
+	// for _, dir := range test {
+	// 	fmt.Printf("%s size= %d\n", dir.name, dir.size)
+	// }
 	// test["/"].GetSize()
 	// fmt.Printf("\nMy Input\n")
 	// myInput := parse("input.txt")

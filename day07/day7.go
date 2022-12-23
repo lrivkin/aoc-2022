@@ -8,9 +8,6 @@ import (
 	"strings"
 )
 
-func part1() int {
-	return 0
-}
 func part2() int {
 	return 0
 }
@@ -32,17 +29,11 @@ func (f *File) String() string {
 	return fmt.Sprintf("%s: %d", f.name, f.size)
 }
 
-func (f *File) getSize() uint64 {
-
-	return f.size
-}
-
 type Directory struct {
 	name   string
 	parent *Directory
 	files  []*File
 	size   uint64
-	done   bool
 }
 
 var (
@@ -110,31 +101,53 @@ func parse(path string) {
 			}
 		}
 	}
-	fmt.Printf("fs=%v\n", fs)
 }
 
 func calculate_sizes() {
 	for i := len(fs) - 1; i >= 0; i-- {
 		for _, dir := range fs[i] {
 			// sum up files
+			fmt.Printf("%s: ", dir.name)
+			var files uint64 = 0
 			for _, file := range dir.files {
-				dir.size += file.size
+				files += file.size
 			}
+			dir.size += files
+			fmt.Printf("files=%d", files)
 			// add size to parent
-			if i > 0 {
+			if dir.parent != nil {
 				dir.parent.size += dir.size
+				fmt.Printf(" parent=%s", dir.parent.name)
 			}
-			fmt.Printf("dir= %s size= %d\n", dir.name, dir.size)
+			fmt.Printf(" size=%d\n", dir.size)
+		}
+		fmt.Println()
+	}
+}
+
+func part1() uint64 {
+	var total uint64
+	total = 0
+	for _, l := range fs {
+		for _, d := range l {
+			if d.size <= 100000 {
+				total += d.size
+			}
 		}
 	}
+	fmt.Printf("Part1 = %d\n", total)
+	return total
 }
 
 func main() {
 	parse("test.txt")
 	calculate_sizes()
+	part1()
+
 	fmt.Printf("\nTrying with my real input\n")
 	parse("input.txt")
 	calculate_sizes()
+	// part1()
 	// for _, dir := range test {
 	// 	fmt.Printf("%s size= %d\n", dir.name, dir.size)
 	// }

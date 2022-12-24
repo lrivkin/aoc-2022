@@ -8,10 +8,6 @@ import (
 	"strings"
 )
 
-func part2() int {
-	return 0
-}
-
 var (
 	CdRegexp   = regexp.MustCompile(`^\$ cd (\S+)$`)
 	LS         = "$ ls"
@@ -31,7 +27,7 @@ func (f *File) String() string {
 
 type Directory struct {
 	name     string
-	fullname string
+	fullPath string
 	parent   *Directory
 	files    []*File
 	size     uint64
@@ -45,10 +41,10 @@ func getPathName(parent *Directory, name string) string {
 	if name == "/" {
 		return name
 	}
-	if parent.fullname == "/" {
+	if parent.fullPath == "/" {
 		return fmt.Sprintf("/%s", name)
 	}
-	return fmt.Sprintf("%s/%s", parent.fullname, name)
+	return fmt.Sprintf("%s/%s", parent.fullPath, name)
 }
 
 func parse(path string) {
@@ -56,7 +52,7 @@ func parse(path string) {
 	inStr := string(in)
 	workDir := &Directory{
 		name:     "/",
-		fullname: "/",
+		fullPath: "/",
 		parent:   nil,
 		files:    []*File{},
 		size:     0,
@@ -106,7 +102,7 @@ func parse(path string) {
 					fullPath := getPathName(workDir, dir)
 					d := &Directory{
 						name:     dir,
-						fullname: fullPath,
+						fullPath: fullPath,
 						parent:   workDir,
 						files:    []*File{},
 					}
@@ -122,7 +118,7 @@ func calculate_sizes() {
 	for i := len(fs) - 1; i >= 0; i-- {
 		for _, dir := range fs[i] {
 			// sum up files
-			fmt.Printf("dir=%s (%s):", dir.name, dir.fullname)
+			fmt.Printf("dir=%s (%s):", dir.name, dir.fullPath)
 			var files uint64 = 0
 			for _, file := range dir.files {
 				files += file.size
@@ -154,21 +150,44 @@ func part1() uint64 {
 	return total
 }
 
+func part2() uint64 {
+	fmt.Printf("\nPart 2\n")
+	var total_space uint64 = 70000000
+	homedir := fs[0]["/"]
+	space_left := total_space - homedir.size
+	needed := 30000000 - space_left
+	fmt.Printf("total size= %d, need to delete= %d\n", homedir.size, needed)
+
+	var space_freed uint64
+	found := false
+	for i := len(fs) - 1; i >= 0; i-- {
+		for _, dir := range fs[i] {
+			if dir.size >= needed {
+				fmt.Printf("delete dir=%s size=%d\n", dir.name, dir.size)
+				if !found {
+					space_freed = dir.size
+					found = true
+				}
+				if dir.size < space_freed {
+					space_freed = dir.size
+				}
+			}
+		}
+	}
+	fmt.Printf("Part2 = %d\n", space_freed)
+	// if the home dir is giant?
+	return space_freed
+}
+
 func main() {
 	parse("test.txt")
 	calculate_sizes()
 	part1()
+	part2()
 
 	fmt.Printf("\nTrying with my real input\n")
 	parse("input.txt")
 	calculate_sizes()
 	part1()
-	// for _, dir := range test {
-	// 	fmt.Printf("%s size= %d\n", dir.name, dir.size)
-	// }
-	// test["/"].GetSize()
-	// fmt.Printf("\nMy Input\n")
-	// myInput := parse("input.txt")
-	// // myInput["/"].GetSize()
-	// myInput["/"].PrintAll(0)
+	part2()
 }

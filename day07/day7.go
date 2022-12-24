@@ -30,24 +30,36 @@ func (f *File) String() string {
 }
 
 type Directory struct {
-	name   string
-	parent *Directory
-	files  []*File
-	size   uint64
+	name     string
+	fullname string
+	parent   *Directory
+	files    []*File
+	size     uint64
 }
 
 var (
 	fs []map[string]*Directory
 )
 
+func getPathName(parent *Directory, name string) string {
+	if name == "/" {
+		return name
+	}
+	if parent.fullname == "/" {
+		return fmt.Sprintf("/%s", name)
+	}
+	return fmt.Sprintf("%s/%s", parent.fullname, name)
+}
+
 func parse(path string) {
 	in, _ := os.ReadFile(path)
 	inStr := string(in)
 	workDir := &Directory{
-		name:   "/",
-		parent: nil,
-		files:  []*File{},
-		size:   0,
+		name:     "/",
+		fullname: "/",
+		parent:   nil,
+		files:    []*File{},
+		size:     0,
 	}
 
 	fs = []map[string]*Directory{{"/": workDir}}
@@ -61,9 +73,10 @@ func parse(path string) {
 					workDir = workDir.parent
 					// fmt.Printf("moved to %s\n", workDir.name)
 				} else {
-					d, ok := fs[level][dir]
+					fullPath := getPathName(workDir, dir)
+					d, ok := fs[level][fullPath]
 					if !ok {
-						fmt.Printf("fs[%d]=%v\n", level, fs[level])
+						fmt.Printf("looking for %s, dir=%s, fs[%d]=%v\n", fullPath, dir, level, fs[level])
 						panic("this dir should exist but doesnt")
 					}
 					workDir = d
@@ -90,12 +103,14 @@ func parse(path string) {
 				l := fs[level]
 				_, ok := l[dir]
 				if !ok {
+					fullPath := getPathName(workDir, dir)
 					d := &Directory{
-						name:   dir,
-						parent: workDir,
-						files:  []*File{},
+						name:     dir,
+						fullname: fullPath,
+						parent:   workDir,
+						files:    []*File{},
 					}
-					fs[level][dir] = d
+					fs[level][fullPath] = d
 				}
 				// fmt.Printf("added subdir %s to dir %s, fs=%v\n", dir, workDir.name, fs)
 			}
@@ -107,13 +122,13 @@ func calculate_sizes() {
 	for i := len(fs) - 1; i >= 0; i-- {
 		for _, dir := range fs[i] {
 			// sum up files
-			fmt.Printf("%s: ", dir.name)
+			fmt.Printf("dir=%s (%s):", dir.name, dir.fullname)
 			var files uint64 = 0
 			for _, file := range dir.files {
 				files += file.size
 			}
 			dir.size += files
-			fmt.Printf("files=%d", files)
+			fmt.Printf(" files=%d", files)
 			// add size to parent
 			if dir.parent != nil {
 				dir.parent.size += dir.size
@@ -147,7 +162,7 @@ func main() {
 	fmt.Printf("\nTrying with my real input\n")
 	parse("input.txt")
 	calculate_sizes()
-	// part1()
+	part1()
 	// for _, dir := range test {
 	// 	fmt.Printf("%s size= %d\n", dir.name, dir.size)
 	// }

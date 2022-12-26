@@ -34,6 +34,49 @@ func (p *Position) move(d utils.Direction) {
 	}
 }
 
+func (cur *Position) follow(ahead *Position) {
+	// right
+	if ahead.x-cur.x > 1 {
+		if ahead.y > cur.y {
+			cur.move(utils.Up)
+		} else if ahead.y < cur.y {
+			cur.move(utils.Down)
+		}
+		cur.move(utils.Right)
+		return
+	}
+	// left
+	if ahead.x-cur.x < -1 {
+		if ahead.y > cur.y {
+			cur.move(utils.Up)
+		} else if ahead.y < cur.y {
+			cur.move(utils.Down)
+		}
+		cur.move(utils.Left)
+		return
+	}
+	// up
+	if ahead.y-cur.y > 1 {
+		if ahead.x > cur.x {
+			cur.move(utils.Right)
+		} else if ahead.x < cur.x {
+			cur.move(utils.Left)
+		}
+		cur.move(utils.Up)
+		return
+	}
+	// down
+	if ahead.y-cur.y < -1 {
+		if ahead.x > cur.x {
+			cur.move(utils.Right)
+		} else if ahead.x < cur.x {
+			cur.move(utils.Left)
+		}
+		cur.move(utils.Down)
+		return
+	}
+}
+
 type Snake struct {
 	head, tail *Position
 }
@@ -54,17 +97,17 @@ func NewSnake() *Snake {
 
 // Return the positions the tail went on this turn
 func (s *Snake) move(m Move) []Position {
-	positions := []Position{*s.tail}
+	tailPos := *s.tail
+	positions := []Position{tailPos}
 	for i := 0; i < m.Num; i++ {
 		s.head.move(m.Direction)
-		if utils.AbsVal(s.head.x-s.tail.x) > 1 {
-			s.tail.y = s.head.y
-			s.tail.move(m.Direction)
-		} else if utils.AbsVal(s.head.y-s.tail.y) > 1 {
-			s.tail.x = s.head.x
-			s.tail.move(m.Direction)
+		s.tail.follow(s.head)
+		if *s.tail != tailPos {
+			tailPos.x = s.tail.x
+			tailPos.y = s.tail.y
+			positions = append(positions, tailPos)
+
 		}
-		positions = append(positions, *s.tail)
 		// fmt.Printf("%v\n", s)
 	}
 	return positions
@@ -99,44 +142,7 @@ func (r *Rope) move(m Move) []Position {
 		ahead := r.knots[0]
 		ahead.move(m.Direction)
 		for j := 1; j < len(r.knots); j++ {
-			cur := r.knots[j]
-			ahead := r.knots[j-1]
-			// right
-			if ahead.x-cur.x > 1 {
-				if ahead.y > cur.y {
-					cur.move(utils.Up)
-				} else if ahead.y < cur.y {
-					cur.move(utils.Down)
-				}
-				cur.move(utils.Right)
-			}
-			// left
-			if ahead.x-cur.x < -1 {
-				if ahead.y > cur.y {
-					cur.move(utils.Up)
-				} else if ahead.y < cur.y {
-					cur.move(utils.Down)
-				}
-				cur.move(utils.Left)
-			}
-			// up
-			if ahead.y-cur.y > 1 {
-				if ahead.x > cur.x {
-					cur.move(utils.Right)
-				} else if ahead.x < cur.x {
-					cur.move(utils.Left)
-				}
-				cur.move(utils.Up)
-			}
-			// down
-			if ahead.y-cur.y < -1 {
-				if ahead.x > cur.x {
-					cur.move(utils.Right)
-				} else if ahead.x < cur.x {
-					cur.move(utils.Left)
-				}
-				cur.move(utils.Down)
-			}
+			r.knots[j].follow(r.knots[j-1])
 		}
 		if *tail != tailPos {
 			positions = append(positions, *tail)

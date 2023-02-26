@@ -13,9 +13,9 @@ import (
 )
 
 type Monkey struct {
-	items      []int
+	items      []uint64
 	op         *ast.BinaryExpr
-	testVal    int
+	testVal    uint64
 	nextMonkey []int
 	numItems   int
 }
@@ -29,7 +29,10 @@ func NewMonkey(s string) *Monkey {
 			rawItems := strings.TrimPrefix(strings.TrimSpace(line), "Starting items: ")
 			// fmt.Println(rawItems)
 			items, _ := utils.StringListToIntSlice(rawItems)
-			m.items = items
+			m.items = make([]uint64, len(items))
+			for i, x := range items {
+				m.items[i] = uint64(x)
+			}
 		}
 		if i == 2 {
 			rawOp := strings.TrimPrefix(strings.TrimSpace(line), "Operation: new = ")
@@ -41,7 +44,7 @@ func NewMonkey(s string) *Monkey {
 			m.op = exp.(*ast.BinaryExpr)
 		}
 		if i == 3 {
-			val, _ := strconv.Atoi(strings.TrimPrefix(strings.TrimSpace(line), "Test: divisible by "))
+			val, _ := strconv.ParseUint(strings.TrimPrefix(strings.TrimSpace(line), "Test: divisible by "), 10, 64)
 			m.testVal = val
 		}
 		if i == 4 {
@@ -67,14 +70,14 @@ func printUtil(in []*Monkey) {
 	fmt.Println()
 }
 
-func (m *Monkey) applyOp(item int) int {
+func (m *Monkey) applyOp(item uint64) uint64 {
 	// fmt.Printf("X: %v\tOP: %v\tY: %v\n", m.op.X, m.op.Op, m.op.Y)
-	var y int
+	var y uint64
 	switch m.op.Y.(type) {
 	case *ast.Ident:
 		y = item
 	case *ast.BasicLit:
-		y, _ = strconv.Atoi(m.op.Y.(*ast.BasicLit).Value)
+		y, _ = strconv.ParseUint(m.op.Y.(*ast.BasicLit).Value, 10, 64)
 	}
 	switch m.op.Op {
 	case token.ADD:
@@ -84,11 +87,11 @@ func (m *Monkey) applyOp(item int) int {
 		// fmt.Printf("%d * %d\n", item, y)
 		return item * y
 	default:
-		return -1
+		return 0
 	}
 }
 
-func (m *Monkey) tossItem(item int) (int, int) {
+func (m *Monkey) tossItem(item uint64) (uint64, int) {
 	// apply function
 	// fmt.Printf("start: item= %d\n", item)
 	item = m.applyOp(item)
@@ -136,9 +139,7 @@ func part1(monkeys []*Monkey) int {
 	}
 	return -1
 }
-func part2() int {
-	return -1
-}
+
 func main() {
 	test := parseMonkeys("input.txt")
 	part1(test)

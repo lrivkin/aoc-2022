@@ -1,8 +1,19 @@
 package utils
 
 import (
+	"sort"
+
 	"golang.org/x/exp/constraints"
 )
+
+func SortSlice[T constraints.Ordered](s []T, max bool) {
+	sort.Slice(s, func(i, j int) bool {
+		if max {
+			return s[i] > s[j]
+		}
+		return s[i] < s[j]
+	})
+}
 
 func Max[T constraints.Ordered](s []T) T {
 	if len(s) == 0 {

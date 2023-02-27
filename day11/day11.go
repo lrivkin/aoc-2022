@@ -12,6 +12,8 @@ import (
 	"github.com/lrivkin/aoc-2022/utils"
 )
 
+var LCM uint64 = 1
+
 type Monkey struct {
 	items      []uint64
 	op         *ast.BinaryExpr
@@ -82,10 +84,10 @@ func (m *Monkey) applyOp(item uint64) uint64 {
 	switch m.op.Op {
 	case token.ADD:
 		// fmt.Printf("%d + %d\n", item, y)
-		return item + y
+		return ((item % LCM) + (y % LCM)) % LCM
 	case token.MUL:
 		// fmt.Printf("%d * %d\n", item, y)
-		return item * y
+		return ((item % LCM) * (y % LCM)) % LCM
 	default:
 		return 0
 	}
@@ -97,7 +99,7 @@ func (m *Monkey) tossItem(item uint64) (uint64, int) {
 	item = m.applyOp(item)
 	// fmt.Printf("function applied: item= %d\n", item)
 
-	item = item / 3
+	// item = item / 3
 	// fmt.Printf("divided by 3: item= %d\n", item)
 
 	if item%m.testVal == 0 {
@@ -120,9 +122,12 @@ func parseMonkeys(path string) []*Monkey {
 }
 
 func part1(monkeys []*Monkey) int {
-	fmt.Println("start")
-	printUtil(monkeys)
-	for r := 0; r < 20; r++ {
+	for _, m := range monkeys {
+		LCM *= m.testVal
+	}
+	// fmt.Println("start")
+	// printUtil(monkeys)
+	for r := 0; r < 10000; r++ {
 		for _, m := range monkeys {
 			for _, item := range m.items {
 				nevVal, tossTo := m.tossItem(item)
@@ -131,16 +136,24 @@ func part1(monkeys []*Monkey) int {
 			m.numItems += len(m.items)
 			m.items = m.items[0:0]
 		}
-		fmt.Printf("After round %d\n", r+1)
-		printUtil(monkeys)
+		// fmt.Printf("After round %d\n", r+1)
+		// printUtil(monkeys)
+		if (r+1)%1000 == 0 || r == 19 || r == 0 {
+			fmt.Printf("\n== After round %d ==\n", r+1)
+			for i, m := range monkeys {
+				fmt.Printf("Monkey %d inspected items %d times.\n", i, m.numItems)
+			}
+		}
 	}
-	for i, m := range monkeys {
-		fmt.Printf("Monkey %d inspected items %d times.\n", i, m.numItems)
+	tosses := make([]int, len(monkeys))
+	for i := range monkeys {
+		tosses[i] = monkeys[i].numItems
 	}
-	return -1
+	utils.SortSlice(tosses, true)
+	return tosses[0] * tosses[1]
 }
 
 func main() {
 	test := parseMonkeys("input.txt")
-	part1(test)
+	fmt.Println(part1(test))
 }
